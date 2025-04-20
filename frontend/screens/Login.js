@@ -8,10 +8,13 @@ import {
   SafeAreaView,
   Image,
 } from "react-native";
+import { signupUser, loginUser } from '../firebase';
 
-export default function Login() {
+export default function Login({ navigation }) {
   const [activeTab, setActiveTab] = useState("Register");
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const isRegister = activeTab === "Register";
 
@@ -68,6 +71,8 @@ export default function Login() {
             placeholderTextColor="#999"
             keyboardType="email-address"
             autoCapitalize="none"
+            value={email}
+            onChangeText={(text) => setEmail(text)}
           />
         </View>
 
@@ -75,12 +80,14 @@ export default function Login() {
         <View style={styles.inputGroup}>
           <Text style={styles.labelText}>Password</Text>
           <View style={styles.passwordContainer}>
-            <TextInput
-              style={[styles.input, { flex: 1, borderWidth: 0 }]}
-              placeholder="********"
-              placeholderTextColor="#999"
-              secureTextEntry={!passwordVisible}
-            />
+          <TextInput
+            style={[styles.input, { flex: 1, borderWidth: 0 }]}
+            placeholder="********"
+            placeholderTextColor="#999"
+            secureTextEntry={!passwordVisible}
+            value={password}
+            onChangeText={(text) => setPassword(text)}
+          />
             <TouchableOpacity
               onPress={() => setPasswordVisible(!passwordVisible)}
             >
@@ -94,7 +101,34 @@ export default function Login() {
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity style={styles.primaryButton}>
+        <TouchableOpacity 
+            style={styles.primaryButton}
+            onPress={async () => {
+              if(email == "" || password == "") {
+                alert("Please fill in all fields");
+              }
+              if (isRegister) {
+                const result = await signupUser(email, password);
+                if (result.success) {
+                  alert(result.message);
+                  setActiveTab("Login");
+                } else {
+                  alert(result.message);
+                }
+              } else {
+                const result = await loginUser(email, password);
+                console.log(result);
+                alert(result.message);
+
+                if(result.success) {
+                  navigation.navigate("Dashboard", { user: result.user });
+                }else{
+                  alert('Login Failed', result.message);
+                }
+              }
+              
+            }} 
+        >
           <Text style={styles.primaryButtonText}>
             {isRegister ? "Register" : "Login"}
           </Text>
