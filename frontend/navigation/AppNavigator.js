@@ -25,7 +25,7 @@ export default function AppNavigator() {
           component={Login}
           options={{ headerShown: false }}
         />
-        {/* <Stack.Screen name="Dashboard" component={Dashboard} /> */}
+        <Stack.Screen name="Dashboard" component={Dashboard} />
         {/*
         <Stack.Screen name="Logs" component={Logs} />
         <Stack.Screen name="Results" component={Results} />  */}
