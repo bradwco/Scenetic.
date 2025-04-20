@@ -25,10 +25,21 @@ export default function AppNavigator() {
           component={Login}
           options={{ headerShown: false }}
         />
-        <Stack.Screen name="Dashboard" component={Dashboard} />
-        {/*
-        <Stack.Screen name="Logs" component={Logs} />
-        <Stack.Screen name="Results" component={Results} />  */}
+        <Stack.Screen
+          name="Dashboard"
+          component={Dashboard}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Results"
+          component={Results}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Logs"
+          component={Logs}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

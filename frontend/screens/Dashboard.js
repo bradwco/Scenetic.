@@ -6,24 +6,30 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
-  ScrollView,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
 } from "react-native";
 
 const presets = [
   "Foggy",
   "Forest",
   "Ruins",
-  "Urban",
   "Night",
-  "Beach",
   "Desert",
-  "Romantic",
+  "Beach",
   "Snow",
-  "Abandoned",
+  "Romantic",
+  "River",
+  "Action",
+  "Neon",
+  "Canyon",
 ];
 
 export default function Dashboard({ navigation }) {
   const [sceneDescription, setSceneDescription] = useState("");
+  const [selectedPresets, setSelectedPresets] = useState([]);
 
   const addToDescription = (word) => {
     const space = sceneDescription.length > 0 ? " " : "";
@@ -31,69 +37,119 @@ export default function Dashboard({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Describe Your Scene</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.container}>
+        {/* Logo top-right */}
+        <View style={styles.logoWrapper}>
+          <Text style={styles.logo}>
+            <Text style={styles.logoWhite}>SCEN</Text>
+            <Text style={styles.logoOrange}>ETIC.</Text>
+          </Text>
+        </View>
 
-      {/* White paragraph input */}
-      <TextInput
-        style={styles.textArea}
-        placeholder="Describe your scene..."
-        placeholderTextColor="#999"
-        value={sceneDescription}
-        onChangeText={setSceneDescription}
-        multiline
-        numberOfLines={5}
-      />
+        {/* Main content */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.mainContent}
+        >
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Dashboard</Text>
+          </View>
 
-      {/* Preset keywords section */}
-      <View style={styles.presetsContainer}>
-        <Text style={styles.sectionLabel}>Presets</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {presets.map((preset, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.presetButton}
-              onPress={() => addToDescription(preset)}
-            >
-              <Text style={styles.presetText}>{preset}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        <TouchableOpacity onPress={() => console.log("View more clicked")}>
-          <Text style={styles.viewMore}>View more</Text>
-        </TouchableOpacity>
+          <Text style={styles.subheading}>Match to your movie scene!</Text>
+
+          <TextInput
+            style={styles.textArea}
+            placeholder="Describe your scene..."
+            placeholderTextColor="#999"
+            value={sceneDescription}
+            onChangeText={setSceneDescription}
+            multiline
+            numberOfLines={5}
+          />
+
+          <Text style={styles.smallText}>or choose preset keywords...</Text>
+
+          <Text style={styles.presetsLabel}>Presets</Text>
+
+          <View style={styles.grid}>
+            {presets.map((preset, index) => {
+              const isSelected = selectedPresets.includes(preset);
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.presetButton,
+                    isSelected ? styles.orangeButton : styles.whiteButton,
+                  ]}
+                  onPress={() => {
+                    const isAlreadySelected = selectedPresets.includes(preset);
+
+                    if (isAlreadySelected) {
+                      setSelectedPresets((prev) =>
+                        prev.filter((p) => p !== preset)
+                      );
+                      setSceneDescription((prev) => {
+                        const words = prev
+                          .split(" ")
+                          .filter((word) => word !== preset);
+                        return words.join(" ");
+                      });
+                    } else {
+                      setSelectedPresets((prev) => [...prev, preset]);
+                      const space = sceneDescription.length > 0 ? " " : "";
+                      setSceneDescription((prev) => prev + space + preset);
+                    }
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.presetText,
+                      isSelected ? styles.whiteText : styles.orangeText,
+                    ]}
+                  >
+                    {preset}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity onPress={() => console.log("View more clicked")}>
+            <Text style={styles.viewMore}>View more</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.scanButton}
+            onPress={() => console.log("Begin Scan clicked")}
+          >
+            <Text style={styles.scanButtonText}>Begin Scan</Text>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+
+        {/* Bottom nav bar */}
+        <View style={styles.navBar}>
+          <TouchableOpacity onPress={() => navigation.navigate("Dashboard")}>
+            <Image
+              source={require("../assets/home.png")}
+              style={styles.navIcon}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Results")}>
+            <Image
+              source={require("../assets/camera.png")}
+              style={styles.navIcon}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("Logs")}>
+            <Image
+              source={require("../assets/logs.png")}
+              style={styles.navIcon}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
-
-      {/* Begin scan button */}
-      <TouchableOpacity
-        style={styles.scanButton}
-        onPress={() => console.log("Begin scan clicked")}
-      >
-        <Text style={styles.scanButtonText}>Begin Scan</Text>
-      </TouchableOpacity>
-
-      {/* Bottom nav bar */}
-      <View style={styles.navBar}>
-        <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-          <Image
-            source={require("../assets/home.png")}
-            style={styles.navIcon}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate("Dashboard")}>
-          <Image
-            source={require("../assets/camera.png")}
-            style={styles.navIcon}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate("Logs")}>
-          <Image
-            source={require("../assets/logs.png")}
-            style={styles.navIcon}
-          />
-        </TouchableOpacity>
-      </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -101,15 +157,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#121212",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    justifyContent: "space-between",
   },
-  header: {
-    color: "#fff",
-    fontSize: 20,
+  logoWrapper: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    zIndex: 1,
+  },
+  logo: {
+    fontSize: 16,
     fontWeight: "600",
-    marginBottom: 16,
+  },
+  logoWhite: {
+    color: "white",
+  },
+  logoOrange: {
+    color: "#F28322",
+  },
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 130,
+    paddingBottom: 100,
+    justifyContent: "flex-start",
+  },
+  headerRow: {
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#F28322",
+    marginBottom: 20,
+  },
+  subheading: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 12,
   },
   textArea: {
     backgroundColor: "#fff",
@@ -119,40 +205,62 @@ const styles = StyleSheet.create({
     color: "#333",
     height: 120,
     textAlignVertical: "top",
-    marginBottom: 24,
+    marginBottom: 12,
   },
-  presetsContainer: {
-    marginBottom: 32,
+  smallText: {
+    color: "#aaa",
+    fontSize: 12,
+    marginBottom: 16,
   },
-  sectionLabel: {
+  presetsLabel: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "500",
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
   presetButton: {
-    backgroundColor: "#F28322",
     borderRadius: 20,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 10,
+    marginBottom: 10,
+    width: "30%",
+    alignItems: "center",
+    height: 42,
+  },
+  orangeButton: {
+    backgroundColor: "#F28322",
+  },
+  whiteButton: {
+    backgroundColor: "#fff",
   },
   presetText: {
-    color: "#fff",
     fontSize: 14,
     fontWeight: "500",
   },
+  orangeText: {
+    color: "#F28322",
+  },
+  whiteText: {
+    color: "#fff",
+  },
   viewMore: {
-    color: "#aaa",
-    fontSize: 12,
-    marginTop: 8,
+    color: "#fff",
+    fontSize: 13,
+    marginTop: 4,
+    marginBottom: 24,
+    textAlign: "right",
   },
   scanButton: {
     backgroundColor: "#D5894B",
+    paddingVertical: 16,
     borderRadius: 30,
-    paddingVertical: 14,
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 10,
   },
   scanButtonText: {
     color: "#fff",
@@ -163,8 +271,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     backgroundColor: "#1f1f1f",
-    paddingVertical: 12,
-    borderRadius: 20,
+    paddingVertical: 14,
+    borderRadius: 30,
+    marginHorizontal: 4,
+    marginBottom: 18,
   },
   navIcon: {
     width: 24,
