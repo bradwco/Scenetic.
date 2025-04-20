@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Image,
   Alert,
 } from "react-native";
-import { signupUser, loginUser } from '../firebase';
+import { signupUser, loginUser, monitorAuthState } from '../firebase';
 import * as Keychain from 'react-native-keychain';
 
 export default function Login({ navigation }) {
@@ -19,6 +19,30 @@ export default function Login({ navigation }) {
   const [password, setPassword] = useState("");
 
   const isRegister = activeTab === "Register";
+
+  // 🔥 New code: Check if already logged in
+  useEffect(() => {
+    const unsubscribe = monitorAuthState((user) => {
+      if (user) {
+        navigation.reset({
+          index: 0,
+          routes: [{
+            name: 'Dashboard',
+            params: {
+              user: {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+              }
+            }
+          }],
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   return (
     <SafeAreaView style={styles.container} importantForAutofill="yes">
@@ -76,7 +100,6 @@ export default function Login({ navigation }) {
             textContentType="emailAddress"
             value={email}
             onChangeText={setEmail}
-            inputmode='email'
           />
         </View>
 
@@ -96,7 +119,6 @@ export default function Login({ navigation }) {
               textContentType="password"
               value={password}
               onChangeText={setPassword}
-              inputmode='password'
             />
             <TouchableOpacity
               onPress={() => setPasswordVisible(!passwordVisible)}
@@ -133,13 +155,9 @@ export default function Login({ navigation }) {
 
               if (result.success) {
                 Alert.alert("Login Successful");
-                navigation.navigate("Dashboard", { 
-                  user: {
-                    uid: result.user.uid,
-                    email: result.user.email,
-                    displayName: result.user.displayName,
-                    photoURL: result.user.photoURL,
-                  }
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Dashboard', params: { user: result.user } }],
                 });
                 await Keychain.setGenericPassword(email, password);
               } else {
