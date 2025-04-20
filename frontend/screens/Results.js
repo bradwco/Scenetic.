@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react"; // <-- Add useState
 import BottomNavBar from "../components/BottomNavBar";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { WebView } from "react-native-webview";
 
 export default function Results({ navigation }) {
@@ -10,6 +10,25 @@ export default function Results({ navigation }) {
   const monitor = 2;
   const confidence = 91;
   const tags = ["Forest", "Fog", "Ruins"];
+
+  const [buttonDisabled, setButtonDisabled] = useState(false); // <-- Add state
+
+  const triggerSequence = () => {
+    if (buttonDisabled) return; // just in case
+
+    setButtonDisabled(true); // Disable immediately
+
+    fetch('http://192.168.137.1:5000/start-sequence', {
+      method: 'POST',
+    })
+    .then(response => console.log('Arduino sequence triggered!'))
+    .catch(error => console.error('Error triggering Arduino:', error));
+
+    // Re-enable button after 20 seconds
+    setTimeout(() => {
+      setButtonDisabled(false);
+    }, 20000); // 20,000 ms = 20 sec
+  };
 
   return (
     <View style={styles.container}>
@@ -34,6 +53,17 @@ export default function Results({ navigation }) {
             mediaPlaybackRequiresUserAction={false}
           />
         </View>
+
+        {/* 🔥 Temp Button */}
+        <TouchableOpacity
+          style={[styles.tempButton, buttonDisabled && styles.tempButtonDisabled]}
+          onPress={triggerSequence}
+          disabled={buttonDisabled}
+        >
+          <Text style={styles.tempButtonText}>
+            {buttonDisabled ? "Cooldown..." : "Run Arduino Sequence"}
+          </Text>
+        </TouchableOpacity>
 
         <Text style={styles.scanText}>Scanning...</Text>
         <View style={styles.progressBarBackground}>
@@ -67,6 +97,7 @@ export default function Results({ navigation }) {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -124,6 +155,25 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+
+  /* 🔥 ADD this for the temporary button */
+  tempButton: {
+    backgroundColor: "#F28322",
+    paddingVertical: 12,
+    borderRadius: 30,
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: -30,
+  },
+  tempButtonDisabled: {
+    backgroundColor: "#888", // <-- gray when disabled
+  },
+  tempButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },  
+
   scanText: {
     color: "white",
     fontSize: 14,
