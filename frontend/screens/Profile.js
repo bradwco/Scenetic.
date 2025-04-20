@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import BottomNavBar from "../components/BottomNavBar";
 import {
   View,
@@ -11,7 +11,15 @@ import {
   Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { logoutUser } from "../firebase";
+import {
+  logoutUser,
+  auth,
+  db,
+  updateUserProfile,
+  getUserProfile,
+} from "../firebase";
+import { doc, setDoc, updateEmail, updatePassword, getDoc } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Profile({ navigation }) {
   const [profileImage, setProfileImage] = useState(
@@ -22,6 +30,83 @@ export default function Profile({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load profile data when component mounts
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (!auth.currentUser) return;
+      
+      try {
+        setIsLoading(true);
+        // Try to load from AsyncStorage first
+        const storedData = await AsyncStorage.getItem('profileData');
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          setFirstName(parsedData.firstName || "");
+          setLastName(parsedData.lastName || "");
+          setEmail(parsedData.email || auth.currentUser.email || "");
+          if (parsedData.profileImageUrl) {
+            setProfileImage({ uri: parsedData.profileImageUrl });
+          }
+        }
+
+        // Then load from Firebase
+        const userRef = doc(db, "users", auth.currentUser.uid);
+        const docSnap = await getDoc(userRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log("Loaded profile data:", data);
+          
+          // Update state with loaded data
+          setFirstName(data.firstName || "");
+          setLastName(data.lastName || "");
+          setEmail(data.email || auth.currentUser.email || "");
+          
+          // Handle profile image
+          if (data.profileImageUrl) {
+            setProfileImage({ uri: data.profileImageUrl });
+          }
+
+          // Store in AsyncStorage
+          await AsyncStorage.setItem('profileData', JSON.stringify(data));
+        } else {
+          // Create initial profile if it doesn't exist
+          const initialData = {
+            firstName: "",
+            lastName: "",
+            email: auth.currentUser.email,
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(userRef, initialData);
+          await AsyncStorage.setItem('profileData', JSON.stringify(initialData));
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error);
+        Alert.alert("Error", "Failed to load profile data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadProfileData();
+  }, []);
+
+  // Save to AsyncStorage whenever fields change
+  useEffect(() => {
+    const saveToLocalStorage = async () => {
+      const data = {
+        firstName,
+        lastName,
+        email,
+        profileImageUrl: typeof profileImage === 'object' && profileImage.uri ? profileImage.uri : null
+      };
+      await AsyncStorage.setItem('profileData', JSON.stringify(data));
+    };
+    
+    saveToLocalStorage();
+  }, [firstName, lastName, email, profileImage]);
 
   const handleProfileImagePress = async () => {
     Alert.alert("Change Profile Picture", "Choose an option", [
@@ -53,6 +138,73 @@ export default function Profile({ navigation }) {
     ]);
   };
 
+  const handleSaveChanges = async () => {
+    if (!auth.currentUser) {
+      Alert.alert("Error", "You must be logged in to save changes");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      
+      // Prepare the update data
+      const updateData = {
+        firstName,
+        lastName,
+        email: email || auth.currentUser.email,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Handle profile image
+      if (typeof profileImage === 'object' && profileImage.uri) {
+        updateData.profileImageUrl = profileImage.uri;
+      }
+
+      console.log("Saving profile data:", updateData);
+
+      // Update Firestore document
+      await setDoc(userRef, updateData, { merge: true });
+      console.log("Profile updated in Firestore");
+
+      // Update email if changed
+      if (updateData.email && updateData.email !== auth.currentUser.email) {
+        await updateEmail(auth.currentUser, updateData.email);
+        console.log("Email updated successfully");
+      }
+
+      // Update password if provided and valid
+      if (password && password.length >= 6) {
+        await updatePassword(auth.currentUser, password);
+        console.log("Password updated successfully");
+        setPassword("");
+      }
+
+      // Verify the update
+      const updatedDoc = await getDoc(userRef);
+      if (updatedDoc.exists()) {
+        const updatedData = updatedDoc.data();
+        console.log("Verified updated data:", updatedData);
+        // Update AsyncStorage with the verified data
+        await AsyncStorage.setItem('profileData', JSON.stringify(updatedData));
+        Alert.alert("Success", "Profile updated successfully");
+      } else {
+        throw new Error("Failed to verify profile update");
+      }
+    } catch (error) {
+      console.error("Profile update error:", error);
+      Alert.alert(
+        "Error",
+        error.message || "Failed to update profile. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update the username display to show the actual user's name
+  const displayName = `${firstName} ${lastName}`.trim() || "Default User";
+
   return (
     <View style={styles.container}>
       {/* Logo */}
@@ -68,7 +220,7 @@ export default function Profile({ navigation }) {
       <TouchableOpacity onPress={handleProfileImagePress}>
         <Image source={profileImage} style={styles.avatar} />
       </TouchableOpacity>
-      <Text style={styles.username}>Default User</Text>
+      <Text style={styles.username}>{displayName}</Text>
 
       <View style={{ flex: 1 }}>
         <ScrollView
@@ -131,7 +283,7 @@ export default function Profile({ navigation }) {
 
           <TouchableOpacity
             style={styles.saveButton}
-            onPress={() => Alert.alert("Changes Saved")}
+            onPress={handleSaveChanges}
           >
             <Text style={styles.saveText}>Save Changes</Text>
           </TouchableOpacity>
