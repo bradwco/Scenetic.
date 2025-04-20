@@ -1,17 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
 import BottomNavBar from "../components/BottomNavBar";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
-import { Video } from "expo-av";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { WebView } from "react-native-webview";
 
 export default function Results({ navigation }) {
-  const [isLive, setIsLive] = useState(true);
+  const MJPEG_URL = "http://192.168.137.1:5000/video_feed";
+
   const scanningProgress = 0.75;
   const monitor = 2;
   const confidence = 91;
@@ -19,7 +13,6 @@ export default function Results({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Logo top-right */}
       <View style={styles.logoWrapper}>
         <Text style={styles.logo}>
           <Text style={styles.logoWhite}>SCEN</Text>
@@ -27,50 +20,26 @@ export default function Results({ navigation }) {
         </Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Title row */}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Live View</Text>
-          <View
-            style={[
-              styles.liveCircle,
-              { backgroundColor: isLive ? "red" : "white" },
-            ]}
-          />
+          <View style={styles.liveCircle} />
         </View>
 
-        {/* Live video */}
         <View style={styles.videoWrapper}>
-          <Video
-            source={{ uri: "https://www.w3schools.com/html/mov_bbb.mp4" }}
-            rate={1.0}
-            volume={1.0}
-            isMuted={false}
-            resizeMode="cover"
-            shouldPlay
-            isLooping
+          <WebView
+            source={{ uri: MJPEG_URL }}
             style={styles.video}
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
           />
         </View>
 
-        {/* Scanning Progress */}
         <Text style={styles.scanText}>Scanning...</Text>
         <View style={styles.progressBarBackground}>
-          <View
-            style={[
-              styles.progressBarFill,
-              {
-                width: `${scanningProgress * 100}%`,
-                backgroundColor: "#00FF00",
-              },
-            ]}
-          />
+          <View style={[styles.progressBarFill, { width: `${scanningProgress * 100}%` }]} />
         </View>
 
-        {/* Best Match Box */}
         <View style={styles.matchBox}>
           <Text style={styles.matchTitle}>Best Match</Text>
           <Text style={styles.matchText}>
@@ -94,7 +63,6 @@ export default function Results({ navigation }) {
         </View>
       </ScrollView>
 
-      {/* Bottom nav bar */}
       <BottomNavBar navigation={navigation} resetOnNavigate={true} />
     </View>
   );
@@ -104,10 +72,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#121212",
-    paddingTop: 60,
-    paddingHorizontal: 20,
   },
   content: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
     paddingBottom: 120,
   },
   logoWrapper: {
@@ -142,17 +110,19 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
+    backgroundColor: "red",
   },
   videoWrapper: {
     aspectRatio: 16 / 9,
     width: "100%",
     backgroundColor: "#000",
     marginBottom: 48,
+    borderRadius: 10,
+    overflow: "hidden",
   },
   video: {
     width: "100%",
     height: "100%",
-    borderRadius: 10,
   },
   scanText: {
     color: "white",
@@ -169,6 +139,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: "100%",
+    backgroundColor: "#00FF00",
     borderRadius: 20,
   },
   matchBox: {
