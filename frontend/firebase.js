@@ -95,58 +95,8 @@ export const logoutUser = async () => {
 };
 
 export const monitorAuthState = (callback) => {
-  onAuthStateChanged(auth, (user) => {
+  return onAuthStateChanged(auth, (user) => {
     callback(user);
   });
 };
 
-//
-// 🔥 UPLOAD SNAPSHOT FUNCTION (new)
-//
-
-export const uploadSnapshot = async (localImagePath, itemName, confidence, userTags) => {
-  try {
-    // Fetch local image
-    const response = await fetch(localImagePath);
-    const blob = await response.blob();
-
-    // Upload to Firebase Storage
-    const filename = `matches/${Date.now()}_${itemName}.jpg`;
-    const storageRef = ref(storage, filename);
-
-    await uploadBytes(storageRef, blob);
-    const downloadURL = await getDownloadURL(storageRef);
-
-    // Save info to Firestore
-    await addDoc(collection(db, "Match"), {
-      imageURL: downloadURL,
-      itemName: itemName,
-      confidence: confidence,
-      userTags: userTags,
-      createdAt: serverTimestamp(),
-    });
-
-    console.log("✅ Snapshot uploaded successfully!");
-    return { success: true };
-  } catch (error) {
-    console.error("🔥 Upload Snapshot Error:", error);
-    return { success: false, message: error.message };
-  }
-};
-
-export const fetchMatches = async () => {
-  try {
-    const querySnapshot = await getDocs(collection(db, "Match"));
-    const matches = [];
-
-    querySnapshot.forEach((doc) => {
-      matches.push({ id: doc.id, ...doc.data() });
-    });
-
-    console.log("✅ Retrieved matches:", matches);
-    return { success: true, matches };
-  } catch (error) {
-    console.error("🔥 Error fetching matches:", error);
-    return { success: false, message: error.message };
-  }
-};
