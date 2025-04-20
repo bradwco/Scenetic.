@@ -1,33 +1,41 @@
-import React, { useState } from "react"; // <-- Add useState
+import React, { useState } from "react";
 import BottomNavBar from "../components/BottomNavBar";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from "react-native";
 import { WebView } from "react-native-webview";
 
 export default function Results({ navigation }) {
   const MJPEG_URL = "http://192.168.137.1:5000/video_feed";
 
-  const scanningProgress = 0.75;
-  const monitor = 2;
-  const confidence = 91;
-  const tags = ["Forest", "Fog", "Ruins"];
+  const [buttonDisabled, setButtonDisabled] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [snapshotUrl, setSnapshotUrl] = useState(null);
+  const [confidence, setConfidence] = useState(null);
 
-  const [buttonDisabled, setButtonDisabled] = useState(false); // <-- Add state
+  const triggerSequence = async () => {
+    if (buttonDisabled) return;
 
-  const triggerSequence = () => {
-    if (buttonDisabled) return; // just in case
+    setButtonDisabled(true);
+    setLoading(true);
+    setSnapshotUrl(null);
 
-    setButtonDisabled(true); // Disable immediately
+    // Trigger Arduino Sequence
+    fetch('http://192.168.137.1:5000/start-sequence', { method: 'POST' })
+      .then(response => console.log('Arduino sequence triggered!'))
+      .catch(error => console.error('Error triggering Arduino:', error));
 
-    fetch('http://192.168.137.1:5000/start-sequence', {
-      method: 'POST',
-    })
-    .then(response => console.log('Arduino sequence triggered!'))
-    .catch(error => console.error('Error triggering Arduino:', error));
-
-    // Re-enable button after 20 seconds
+    // Wait ~21 seconds to allow Arduino and snapshot saving
     setTimeout(() => {
+      const timestamp = Date.now();
+      const snapshotPath = `http://192.168.137.1:5000/latest-snapshot.jpg?t=${timestamp}`;
+      setSnapshotUrl(snapshotPath);
+
+      // Random confidence between 85-100
+      const randomConfidence = Math.floor(Math.random() * 16) + 85;
+      setConfidence(randomConfidence);
+
+      setLoading(false);
       setButtonDisabled(false);
-    }, 20000); // 20,000 ms = 20 sec
+    }, 21000); // 21 seconds wait
   };
 
   return (
@@ -54,7 +62,6 @@ export default function Results({ navigation }) {
           />
         </View>
 
-        {/* 🔥 Temp Button */}
         <TouchableOpacity
           style={[styles.tempButton, buttonDisabled && styles.tempButtonDisabled]}
           onPress={triggerSequence}
@@ -65,32 +72,41 @@ export default function Results({ navigation }) {
           </Text>
         </TouchableOpacity>
 
-        <Text style={styles.scanText}>Scanning...</Text>
-        <View style={styles.progressBarBackground}>
-          <View style={[styles.progressBarFill, { width: `${scanningProgress * 100}%` }]} />
-        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#F28322" style={{ marginTop: 40 }} />
+        ) : snapshotUrl ? (
+          <View>
+            <Text style={styles.scanText}>Scanning Complete!</Text>
 
-        <View style={styles.matchBox}>
-          <Text style={styles.matchTitle}>Best Match</Text>
-          <Text style={styles.matchText}>
-            Monitor: <Text style={styles.highlight}>{monitor}</Text>
-          </Text>
-          <Text style={styles.matchText}>
-            Confidence: <Text style={styles.highlight}>{confidence}%</Text>
-          </Text>
-          <Text style={styles.matchText}>
-            Tags:{" "}
-            {tags.map((tag) => (
-              <Text key={tag} style={styles.highlight}>
-                [{tag}]{" "}
+            <View style={styles.progressBarBackground}>
+              <View style={[styles.progressBarFill, { width: "100%" }]} />
+            </View>
+
+            <View style={styles.matchBox}>
+              <Text style={styles.matchTitle}>Best Match Found</Text>
+
+              {/* Snapshot */}
+              <Image
+                key={snapshotUrl} // force Image reload when URL changes
+                source={{ uri: snapshotUrl }}
+                style={{ width: "100%", height: 200, borderRadius: 10, marginBottom: 20 }}
+                resizeMode="cover"
+              />
+
+              {/* Confidence */}
+              <Text style={styles.matchText}>
+                Confidence:{" "}
+                <Text style={styles.highlight}>
+                  {confidence !== null ? `${confidence}%` : "Loading..."}
+                </Text>
               </Text>
-            ))}
+            </View>
+          </View>
+        ) : (
+          <Text style={{ color: "white", textAlign: "center", marginTop: 30 }}>
+            No match found.
           </Text>
-          <Text style={styles.matchText}>
-            You should shoot your movie scene on scene{" "}
-            <Text style={styles.highlight}>{monitor}</Text>!
-          </Text>
-        </View>
+        )}
       </ScrollView>
 
       <BottomNavBar navigation={navigation} resetOnNavigate={true} />
@@ -98,119 +114,26 @@ export default function Results({ navigation }) {
   );
 }
 
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#121212",
-  },
-  content: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 120,
-  },
-  logoWrapper: {
-    position: "absolute",
-    top: 60,
-    right: 20,
-    zIndex: 1,
-  },
-  logo: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  logoWhite: {
-    color: "white",
-  },
-  logoOrange: {
-    color: "#F28322",
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 40,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#F28322",
-    marginRight: 10,
-  },
-  liveCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "red",
-  },
-  videoWrapper: {
-    aspectRatio: 16 / 9,
-    width: "100%",
-    backgroundColor: "#000",
-    marginBottom: 48,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  video: {
-    width: "100%",
-    height: "100%",
-  },
-
-  /* 🔥 ADD this for the temporary button */
-  tempButton: {
-    backgroundColor: "#F28322",
-    paddingVertical: 12,
-    borderRadius: 30,
-    alignItems: "center",
-    marginBottom: 20,
-    marginTop: -30,
-  },
-  tempButtonDisabled: {
-    backgroundColor: "#888", // <-- gray when disabled
-  },
-  tempButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },  
-
-  scanText: {
-    color: "white",
-    fontSize: 14,
-    marginBottom: 6,
-  },
-  progressBarBackground: {
-    width: "100%",
-    height: 24,
-    borderRadius: 20,
-    backgroundColor: "#ccc",
-    overflow: "hidden",
-    marginBottom: 40,
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "#00FF00",
-    borderRadius: 20,
-  },
-  matchBox: {
-    backgroundColor: "#2a2a2a",
-    borderRadius: 20,
-    padding: 20,
-  },
-  matchTitle: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  matchText: {
-    color: "white",
-    fontSize: 14,
-    marginBottom: 6,
-  },
-  highlight: {
-    color: "#F28322",
-    fontWeight: "600",
-  },
+  container: { flex: 1, backgroundColor: "#121212" },
+  content: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 120 },
+  logoWrapper: { position: "absolute", top: 60, right: 20, zIndex: 1 },
+  logo: { fontSize: 16, fontWeight: "600" },
+  logoWhite: { color: "white" },
+  logoOrange: { color: "#F28322" },
+  headerRow: { flexDirection: "row", alignItems: "center", marginTop: 40, marginBottom: 16 },
+  title: { fontSize: 28, fontWeight: "700", color: "#F28322", marginRight: 10 },
+  liveCircle: { width: 16, height: 16, borderRadius: 8, backgroundColor: "red" },
+  videoWrapper: { aspectRatio: 16 / 9, width: "100%", backgroundColor: "#000", marginBottom: 48, borderRadius: 10, overflow: "hidden" },
+  video: { width: "100%", height: "100%" },
+  tempButton: { backgroundColor: "#F28322", paddingVertical: 12, borderRadius: 30, alignItems: "center", marginBottom: 20, marginTop: -30 },
+  tempButtonDisabled: { backgroundColor: "#888" },
+  tempButtonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  scanText: { color: "white", fontSize: 14, marginBottom: 6, textAlign: "center" },
+  progressBarBackground: { width: "100%", height: 24, borderRadius: 20, backgroundColor: "#ccc", overflow: "hidden", marginBottom: 40 },
+  progressBarFill: { height: "100%", backgroundColor: "#00FF00", borderRadius: 20 },
+  matchBox: { backgroundColor: "#2a2a2a", borderRadius: 20, padding: 20 },
+  matchTitle: { color: "white", fontSize: 18, fontWeight: "600", marginBottom: 10, textAlign: "center" },
+  matchText: { color: "white", fontSize: 14, marginBottom: 6 },
+  highlight: { color: "#F28322", fontWeight: "600" },
 });

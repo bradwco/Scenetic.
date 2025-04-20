@@ -14,26 +14,18 @@ import {
 import {
   getFirestore,
   collection,
-  query,
-  where,
-  getDocs,
   addDoc,
-  doc,
-  setDoc,
-  getDoc,
   serverTimestamp,
-  deleteDoc,
-  updateDoc,
 } from "firebase/firestore";
 import {
   getStorage,
   ref,
   uploadBytes,
   getDownloadURL,
-  deleteObject,
 } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// 🔥 Your Firebase project config
 const firebaseConfig = {
   apiKey: "AIzaSyByoJpbU30Cl9_W-GpOOh6Kd8I4Nv2uo7A",
   authDomain: "scenetic-349f5.firebaseapp.com",
@@ -54,31 +46,26 @@ try {
     persistence: getReactNativePersistence(AsyncStorage),
   });
 } catch (error) {
-  // If auth is already initialized, get the existing instance
-  auth = getAuth(app);
+  auth = getAuth(app); // fallback
 }
 
-// Initialize Firestore with offline persistence
+// Firestore and Storage
 const db = getFirestore(app);
 const storage = getStorage(app);
 
 // Export instances
 export { auth, db, storage };
 
-// AUTHENTICATION FUNCTIONS
+//
+// 🔥 AUTHENTICATION FUNCTIONS
+//
+
 export const signupUser = async (email, password) => {
   try {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     await sendEmailVerification(userCredential.user);
     await signOut(auth);
-    return {
-      success: true,
-      message: "Verification email sent. Please verify before logging in.",
-    };
+    return { success: true, message: "Verification email sent. Please verify before logging in." };
   } catch (error) {
     return { success: false, message: error.message };
   }
@@ -86,18 +73,11 @@ export const signupUser = async (email, password) => {
 
 export const loginUser = async (email, password) => {
   try {
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     if (!user.emailVerified) {
       await signOut(auth);
-      return {
-        success: false,
-        message: "Please verify your email before logging in.",
-      };
+      return { success: false, message: "Please verify your email before logging in." };
     }
     return { success: true, user };
   } catch (error) {
@@ -120,3 +100,53 @@ export const monitorAuthState = (callback) => {
   });
 };
 
+//
+// 🔥 UPLOAD SNAPSHOT FUNCTION (new)
+//
+
+export const uploadSnapshot = async (localImagePath, itemName, confidence, userTags) => {
+  try {
+    // Fetch local image
+    const response = await fetch(localImagePath);
+    const blob = await response.blob();
+
+    // Upload to Firebase Storage
+    const filename = `matches/${Date.now()}_${itemName}.jpg`;
+    const storageRef = ref(storage, filename);
+
+    await uploadBytes(storageRef, blob);
+    const downloadURL = await getDownloadURL(storageRef);
+
+    // Save info to Firestore
+    await addDoc(collection(db, "Match"), {
+      imageURL: downloadURL,
+      itemName: itemName,
+      confidence: confidence,
+      userTags: userTags,
+      createdAt: serverTimestamp(),
+    });
+
+    console.log("✅ Snapshot uploaded successfully!");
+    return { success: true };
+  } catch (error) {
+    console.error("🔥 Upload Snapshot Error:", error);
+    return { success: false, message: error.message };
+  }
+};
+
+export const fetchMatches = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "Match"));
+    const matches = [];
+
+    querySnapshot.forEach((doc) => {
+      matches.push({ id: doc.id, ...doc.data() });
+    });
+
+    console.log("✅ Retrieved matches:", matches);
+    return { success: true, matches };
+  } catch (error) {
+    console.error("🔥 Error fetching matches:", error);
+    return { success: false, message: error.message };
+  }
+};

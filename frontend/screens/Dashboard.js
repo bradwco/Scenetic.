@@ -31,11 +31,9 @@ export default function Dashboard({ navigation }) {
       const data = await response.json();
       console.log("Received tags from backend:", data);
 
-      // Ensure we have an array of tags
       const tags = Array.isArray(data.tags) ? data.tags : [];
 
       if (tags.length > 0) {
-        // Ensure all tags are strings and trim any whitespace
         const cleanedTags = tags
           .filter((tag) => typeof tag === "string")
           .map((tag) => tag.trim())
@@ -85,21 +83,6 @@ export default function Dashboard({ navigation }) {
     }
   };
 
-  const extractKeywords = async () => {
-    try {
-      const response = await fetch("http://10.14.4.251:5001/extract-keywords", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: sceneDescription }),
-      });
-      const data = await response.json();
-      return data.keywords;
-    } catch (error) {
-      console.error("Failed to extract keywords:", error);
-      return [];
-    }
-  };
-
   const handlePresetPress = (preset) => {
     const isAlreadySelected = selectedPresets.includes(preset);
 
@@ -115,6 +98,35 @@ export default function Dashboard({ navigation }) {
       setSceneDescription((prev) => prev + space + preset);
     }
   };
+
+  const handleBeginScan = async () => {
+    // Only use scene description split into words
+    const typedWords = sceneDescription
+      .split(/\s+/)   // split on any whitespace
+      .map(word => word.trim().toLowerCase()) // trim + lowercase
+      .filter(word => word.length > 0); // remove empty strings
+  
+    const combinedTags = [...selectedPresets.map(tag => tag.toLowerCase()), ...typedWords];
+  
+    // Remove duplicates
+    const uniqueTags = [...new Set(combinedTags)];
+  
+    alert("Scanning with tags: " + uniqueTags.join(", "));
+  
+    // 🔥 POST the tags to your backend (Pi) before navigating
+    fetch('http://192.168.137.1:5000/set-tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: uniqueTags }),
+    })
+    .then(() => {
+      navigation.navigate("Results", { selectedTags: uniqueTags });
+    })
+    .catch(error => {
+      console.error("🔥 Error sending tags:", error);
+    });
+  };
+  
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -183,14 +195,7 @@ export default function Dashboard({ navigation }) {
                 <Text style={styles.viewMore}>View more</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.scanButton}
-                onPress={async () => {
-                  const keywords = await extractKeywords();
-                  alert("Scanning with keywords: " + keywords.join(", "));
-                  navigation.navigate("Results");
-                }}
-              >
+              <TouchableOpacity style={styles.scanButton} onPress={handleBeginScan}>
                 <Text style={styles.scanButtonText}>Begin Scan</Text>
               </TouchableOpacity>
             </View>
