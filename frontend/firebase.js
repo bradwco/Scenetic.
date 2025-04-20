@@ -30,9 +30,7 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-import {
-    AsyncStorage
-} from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
     apiKey: "AIzaSyByoJpbU30Cl9_W-GpOOh6Kd8I4Nv2uo7A",
