@@ -4,36 +4,66 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Image,
+  TouchableOpacity,
   ScrollView,
+  LayoutAnimation,
+  UIManager,
+  Platform,
 } from "react-native";
 
-export default function Logs({ navigation }) {
-  const [logs, setLogs] = useState([
-    {
-      id: 1,
-      timestamp: "Apr 19, 2025 • 3:42 PM",
-      monitor: 2,
-      confidence: 91,
-      tags: ["Forest", "Fog", "Ruins"],
-    },
-    {
-      id: 2,
-      timestamp: "Apr 19, 2025 • 3:37 PM",
-      monitor: 3,
-      confidence: 78,
-      tags: ["Beach", "Sun", "Sand"],
-    },
-  ]);
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
-  const deleteLog = (id) => {
-    setLogs((prevLogs) => prevLogs.filter((log) => log.id !== id));
+export default function Logs({ navigation }) {
+  const [expandedIndex, setExpandedIndex] = useState(null);
+  const mockLogs = [
+    {
+      date: "Apr 27",
+      logs: [
+        {
+          monitor: 1,
+          confidence: 91,
+          tags: ["Forest", "Fog", "Ruins"],
+          image: "https://img.artpal.com/60196/26-16-9-17-22-51-28m.jpg",
+          time: "5:08 PM",
+        },
+        {
+          monitor: 3,
+          confidence: 87,
+          tags: ["Snow", "Cave", "Wind"],
+          image:
+            "https://live.staticflickr.com/2919/14408389822_5ae12fe015_b.jpg",
+          time: "3:47 PM",
+        },
+      ],
+    },
+    {
+      date: "Apr 24",
+      logs: [
+        {
+          monitor: 2,
+          confidence: 75,
+          tags: ["Night", "Rain", "Neon"],
+          image:
+            "https://www.the-driveby-tourist.com/wp-content/uploads/2022/02/SOOB-1.jpg",
+          time: "9:22 AM",
+        },
+      ],
+    },
+  ];
+
+  const toggleExpand = (index) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   return (
     <View style={styles.container}>
-      {/* Logo */}
       <View style={styles.logoWrapper}>
         <Text style={styles.logo}>
           <Text style={styles.logoWhite}>SCEN</Text>
@@ -41,51 +71,76 @@ export default function Logs({ navigation }) {
         </Text>
       </View>
 
-      {/* Title */}
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Past Matches</Text>
-      </View>
+      <Text style={styles.title}>Past Matches</Text>
 
-      {/* Scrollable Logs */}
       <ScrollView
-        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {logs.map((log) => (
-          <View key={log.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.timestamp}>{log.timestamp}</Text>
-              <TouchableOpacity
-                style={styles.trashWrapper}
-                onPress={() => deleteLog(log.id)}
-              >
-                <Image
-                  source={require("../assets/trash.png")}
-                  style={styles.trashIcon}
-                />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.cardText}>
-              Matched:{" "}
-              <Text style={styles.highlight}>Monitor {log.monitor}</Text>
-            </Text>
-            <Text style={styles.cardText}>
-              Confidence:{" "}
-              <Text style={styles.highlight}>{log.confidence}%</Text>
-            </Text>
-            <Text style={styles.cardText}>
-              Tags:{" "}
-              {log.tags.map((tag, index) => (
-                <Text key={index} style={styles.highlight}>
-                  [{tag}]{" "}
-                </Text>
-              ))}
-            </Text>
+        {mockLogs.map((section, sectionIndex) => (
+          <View key={sectionIndex}>
+            <Text style={styles.sectionDate}>{section.date}</Text>
+            {section.logs.map((log, logIndex) => {
+              const globalIndex = `${sectionIndex}-${logIndex}`;
+              const isExpanded = expandedIndex === globalIndex;
+              return (
+                <TouchableOpacity
+                  key={globalIndex}
+                  onPress={() => toggleExpand(globalIndex)}
+                  activeOpacity={0.9}
+                  style={styles.card}
+                >
+                  <View style={styles.cardHeaderCentered}>
+                    <Text style={styles.cardTitle}>Monitor {log.monitor}</Text>
+                    <TouchableOpacity style={styles.trashButton}>
+                      <Image
+                        source={require("../assets/trash.png")}
+                        style={styles.trashIcon}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <Image source={{ uri: log.image }} style={styles.thumbnail} />
+
+                  {isExpanded && (
+                    <View style={styles.expandedContent}>
+                      <Text style={styles.matchText}>
+                        Confidence:{" "}
+                        <Text style={styles.highlight}>{log.confidence}%</Text>
+                      </Text>
+                      <Text style={styles.matchText}>
+                        Tags:{" "}
+                        {log.tags.map((tag) => (
+                          <Text key={tag} style={styles.highlight}>
+                            [{tag}]{" "}
+                          </Text>
+                        ))}
+                      </Text>
+                      <Text style={styles.matchText}>
+                        Time: <Text style={styles.highlight}>{log.time}</Text>
+                      </Text>
+                      <Text style={styles.matchText}>
+                        You should shoot your movie scene on scene{" "}
+                        <Text style={styles.highlight}>{log.monitor}</Text>!
+                      </Text>
+                    </View>
+                  )}
+
+                  <Image
+                    source={
+                      isExpanded
+                        ? require("../assets/up.png")
+                        : require("../assets/down.png")
+                    }
+                    style={styles.chevron}
+                  />
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ))}
       </ScrollView>
 
-      {/* Bottom nav bar */}
       <BottomNavBar navigation={navigation} resetOnNavigate={true} />
     </View>
   );
@@ -97,6 +152,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#121212",
     paddingTop: 60,
     paddingHorizontal: 20,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   logoWrapper: {
     position: "absolute",
@@ -114,37 +172,60 @@ const styles = StyleSheet.create({
   logoOrange: {
     color: "#F28322",
   },
-  headerRow: {
-    marginTop: 40,
-    marginBottom: 20,
-  },
   title: {
     fontSize: 28,
     fontWeight: "700",
     color: "#F28322",
+    marginBottom: 20,
+    marginTop: 40,
   },
-  scrollArea: {
-    flex: 1,
-    marginBottom: 90,
+  sectionDate: {
+    color: "#aaa",
+    fontSize: 14,
+    marginVertical: 8,
+    fontWeight: "500",
   },
   card: {
-    backgroundColor: "#1f1f1f",
-    borderRadius: 16,
+    backgroundColor: "#2a2a2a",
+    borderRadius: 20,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
+    overflow: "hidden",
   },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  cardHeaderCentered: {
     alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+    position: "relative",
+  },
+  cardTitle: {
+    color: "#F28322",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  trashButton: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    padding: 4,
+  },
+  trashIcon: {
+    width: 20,
+    height: 20,
+    tintColor: "red",
+  },
+  thumbnail: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    borderRadius: 10,
     marginBottom: 10,
   },
-  timestamp: {
-    color: "#ccc",
-    fontSize: 13,
+  expandedContent: {
+    marginTop: 10,
   },
-  cardText: {
-    color: "#fff",
+  matchText: {
+    color: "white",
     fontSize: 14,
     marginBottom: 6,
   },
@@ -152,32 +233,11 @@ const styles = StyleSheet.create({
     color: "#F28322",
     fontWeight: "600",
   },
-  trashWrapper: {
-    padding: 8,
-    borderRadius: 20,
-  },
-  trashIcon: {
-    width: 20,
-    height: 20,
-    tintColor: "red",
-  },
-  navBar: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#1f1f1f",
-    paddingVertical: 2,
-    borderRadius: 30,
-    marginHorizontal: 4,
-    marginBottom: 30,
-  },
-  navIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#fff",
-  },
-  navButton: {
-    padding: 12,
-    alignItems: "center",
-    justifyContent: "center",
+  chevron: {
+    width: 18,
+    height: 18,
+    tintColor: "#aaa",
+    alignSelf: "flex-end",
+    marginTop: 8,
   },
 });
