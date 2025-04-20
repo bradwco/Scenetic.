@@ -90,3 +90,5 @@ export const monitorAuthState = (callback) => {
     callback(user);
   });
 };
+
+// PROFILE FUNCTIONS
