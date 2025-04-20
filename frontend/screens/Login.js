@@ -9,8 +9,13 @@ import {
   Image,
   Alert,
 } from "react-native";
-import { signupUser, loginUser, monitorAuthState } from '../firebase';
-import * as Keychain from 'react-native-keychain';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+} from "firebase/auth";
+import { auth } from "../firebase";
+import * as Keychain from "react-native-keychain";
 
 export default function Login({ navigation }) {
   const [activeTab, setActiveTab] = useState("Register");
@@ -20,29 +25,92 @@ export default function Login({ navigation }) {
 
   const isRegister = activeTab === "Register";
 
-  // 🔥 New code: Check if already logged in
+  // Check if already logged in
   useEffect(() => {
-    const unsubscribe = monitorAuthState((user) => {
+    if (!auth) {
+      console.error("Auth instance is not initialized");
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         navigation.reset({
           index: 0,
-          routes: [{
-            name: 'Dashboard',
-            params: {
-              user: {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-              }
-            }
-          }],
+          routes: [
+            {
+              name: "Dashboard",
+              params: {
+                user: {
+                  uid: user.uid,
+                  email: user.email,
+                  displayName: user.displayName,
+                  photoURL: user.photoURL,
+                },
+              },
+            },
+          ],
         });
       }
     });
 
     return unsubscribe;
   }, []);
+
+  const handleAuth = async () => {
+    if (!auth) {
+      Alert.alert("Error", "Authentication service is not available");
+      return;
+    }
+
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    try {
+      if (isRegister) {
+        console.log("Attempting registration...");
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        console.log("Registration result:", userCredential);
+
+        Alert.alert("Success", "Registration successful!");
+        setActiveTab("Login");
+        setEmail("");
+        setPassword("");
+      } else {
+        console.log("Attempting login...");
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        console.log("Login result:", userCredential);
+
+        try {
+          console.log("Attempting to save credentials to Keychain...");
+          await Keychain.setGenericPassword(email, password);
+          console.log("Credentials saved successfully");
+        } catch (keychainError) {
+          console.warn(
+            "Failed to save credentials to Keychain:",
+            keychainError
+          );
+          // Continue with navigation even if Keychain fails
+        }
+
+        Alert.alert("Success", "Login successful!");
+        console.log("Navigating to Dashboard...");
+        navigation.navigate("Dashboard", { user: userCredential.user });
+      }
+    } catch (error) {
+      console.error("Auth error:", error);
+      Alert.alert("Error", error.message || "An unexpected error occurred");
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} importantForAutofill="yes">
@@ -133,39 +201,7 @@ export default function Login({ navigation }) {
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity 
-          style={styles.primaryButton}
-          onPress={async () => {
-            if (email == "" || password == "") {
-              alert("Please fill in all fields");
-              return;
-            }
-
-            if (isRegister) {
-              const result = await signupUser(email, password);
-              if (result.success) {
-                alert(result.message);
-                setActiveTab("Login");
-              } else {
-                alert(result.message);
-              }
-            } else {
-              const result = await loginUser(email, password);
-              console.log(result);
-
-              if (result.success) {
-                Alert.alert("Login Successful");
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Dashboard', params: { user: result.user } }],
-                });
-                await Keychain.setGenericPassword(email, password);
-              } else {
-                alert('Login Failed', result.message);
-              }
-            }
-          }}
-        >
+        <TouchableOpacity style={styles.primaryButton} onPress={handleAuth}>
           <Text style={styles.primaryButtonText}>
             {isRegister ? "Register" : "Login"}
           </Text>
