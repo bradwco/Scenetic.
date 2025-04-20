@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import BottomNavBar from "../components/BottomNavBar";
 import {
   View,
   Text,
@@ -30,6 +31,8 @@ const presets = [
 export default function Dashboard({ navigation }) {
   const [sceneDescription, setSceneDescription] = useState("");
   const [selectedPresets, setSelectedPresets] = useState([]);
+  const state = navigation.getState();
+  const currentRoute = state.routes[state.index].name;
 
   const addToDescription = (word) => {
     const space = sceneDescription.length > 0 ? " " : "";
@@ -121,33 +124,17 @@ export default function Dashboard({ navigation }) {
 
           <TouchableOpacity
             style={styles.scanButton}
-            onPress={() => console.log("Begin Scan clicked")}
+            onPress={() => {
+              alert("Started scan...");
+              navigation.navigate("Results");
+            }}
           >
             <Text style={styles.scanButtonText}>Begin Scan</Text>
           </TouchableOpacity>
         </KeyboardAvoidingView>
 
         {/* Bottom nav bar */}
-        <View style={styles.navBar}>
-          <TouchableOpacity onPress={() => navigation.navigate("Dashboard")}>
-            <Image
-              source={require("../assets/home.png")}
-              style={styles.navIcon}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("Results")}>
-            <Image
-              source={require("../assets/camera.png")}
-              style={styles.navIcon}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("Logs")}>
-            <Image
-              source={require("../assets/logs.png")}
-              style={styles.navIcon}
-            />
-          </TouchableOpacity>
-        </View>
+        <BottomNavBar navigation={navigation} resetOnNavigate={true} />
       </View>
     </TouchableWithoutFeedback>
   );
@@ -178,8 +165,8 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 130,
-    paddingBottom: 100,
+    paddingTop: 120,
+    paddingBottom: 150,
     justifyContent: "flex-start",
   },
   headerRow: {
@@ -189,7 +176,8 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
     color: "#F28322",
-    marginBottom: 20,
+    marginTop: -12,
+    marginBottom: 25,
   },
   subheading: {
     color: "#fff",
@@ -271,14 +259,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     backgroundColor: "#1f1f1f",
-    paddingVertical: 14,
+    paddingVertical: 2,
     borderRadius: 30,
     marginHorizontal: 4,
-    marginBottom: 18,
+    marginBottom: 30,
   },
   navIcon: {
     width: 24,
     height: 24,
     tintColor: "#fff",
+  },
+  navButton: {
+    padding: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
