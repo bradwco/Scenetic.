@@ -7,8 +7,10 @@ import {
   StyleSheet,
   SafeAreaView,
   Image,
+  Alert,
 } from "react-native";
 import { signupUser, loginUser } from '../firebase';
+import * as Keychain from 'react-native-keychain';
 
 export default function Login({ navigation }) {
   const [activeTab, setActiveTab] = useState("Register");
@@ -19,17 +21,15 @@ export default function Login({ navigation }) {
   const isRegister = activeTab === "Register";
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Scenetic logo in top-right corner */}
-      <View style={styles.logoContainer}>
+    <SafeAreaView style={styles.container} importantForAutofill="yes">
+      <View style={styles.logoContainer} importantForAutofill="yes">
         <Text style={styles.logoText}>
           <Text style={styles.logoWhite}>SCEN</Text>
           <Text style={styles.logoOrange}>ETIC.</Text>
         </Text>
       </View>
 
-      {/* Title and Subtitle */}
-      <View style={styles.topText}>
+      <View style={styles.topText} importantForAutofill="yes">
         <Text style={styles.title}>
           {isRegister
             ? "Go ahead and set up your account"
@@ -40,8 +40,7 @@ export default function Login({ navigation }) {
         </Text>
       </View>
 
-      {/* White Card Container */}
-      <View style={styles.card}>
+      <View style={styles.card} importantForAutofill="yes">
         {/* Tab Switcher */}
         <View style={styles.tabRow}>
           <TouchableOpacity
@@ -67,12 +66,17 @@ export default function Login({ navigation }) {
           <Text style={styles.labelText}>Email Address</Text>
           <TextInput
             style={styles.input}
-            placeholder="example@gmail.com"
+            placeholder="Email"
             placeholderTextColor="#999"
             keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
+            importantForAutofill="yes"
+            autoComplete="email"
+            textContentType="emailAddress"
             value={email}
-            onChangeText={(text) => setEmail(text)}
+            onChangeText={setEmail}
+            inputmode='email'
           />
         </View>
 
@@ -80,14 +84,20 @@ export default function Login({ navigation }) {
         <View style={styles.inputGroup}>
           <Text style={styles.labelText}>Password</Text>
           <View style={styles.passwordContainer}>
-          <TextInput
-            style={[styles.input, { flex: 1, borderWidth: 0 }]}
-            placeholder="********"
-            placeholderTextColor="#999"
-            secureTextEntry={!passwordVisible}
-            value={password}
-            onChangeText={(text) => setPassword(text)}
-          />
+            <TextInput
+              style={[styles.input, { flex: 1, borderWidth: 0 }]}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              secureTextEntry={!passwordVisible}
+              autoCapitalize="none"
+              autoCorrect={false}
+              importantForAutofill="yes"
+              autoComplete="password"
+              textContentType="password"
+              value={password}
+              onChangeText={setPassword}
+              inputmode='password'
+            />
             <TouchableOpacity
               onPress={() => setPasswordVisible(!passwordVisible)}
             >
@@ -102,32 +112,41 @@ export default function Login({ navigation }) {
 
         {/* Submit Button */}
         <TouchableOpacity 
-            style={styles.primaryButton}
-            onPress={async () => {
-              if(email == "" || password == "") {
-                alert("Please fill in all fields");
-              }
-              if (isRegister) {
-                const result = await signupUser(email, password);
-                if (result.success) {
-                  alert(result.message);
-                  setActiveTab("Login");
-                } else {
-                  alert(result.message);
-                }
-              } else {
-                const result = await loginUser(email, password);
-                console.log(result);
-                alert(result.message);
+          style={styles.primaryButton}
+          onPress={async () => {
+            if (email == "" || password == "") {
+              alert("Please fill in all fields");
+              return;
+            }
 
-                if(result.success) {
-                  navigation.navigate("Dashboard", { user: result.user });
-                }else{
-                  alert('Login Failed', result.message);
-                }
+            if (isRegister) {
+              const result = await signupUser(email, password);
+              if (result.success) {
+                alert(result.message);
+                setActiveTab("Login");
+              } else {
+                alert(result.message);
               }
-              
-            }} 
+            } else {
+              const result = await loginUser(email, password);
+              console.log(result);
+
+              if (result.success) {
+                Alert.alert("Login Successful");
+                navigation.navigate("Dashboard", { 
+                  user: {
+                    uid: result.user.uid,
+                    email: result.user.email,
+                    displayName: result.user.displayName,
+                    photoURL: result.user.photoURL,
+                  }
+                });
+                await Keychain.setGenericPassword(email, password);
+              } else {
+                alert('Login Failed', result.message);
+              }
+            }
+          }}
         >
           <Text style={styles.primaryButtonText}>
             {isRegister ? "Register" : "Login"}
@@ -236,13 +255,6 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "600",
   },
-  fieldLabel: {
-    fontSize: 13,
-    color: "#333",
-    marginBottom: 6,
-    marginTop: 10,
-    fontWeight: "500",
-  },
   input: {
     borderColor: "#E5E5E5",
     borderWidth: 1,
@@ -323,7 +335,6 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 16,
   },
-
   labelText: {
     fontSize: 12,
     color: "#666",
