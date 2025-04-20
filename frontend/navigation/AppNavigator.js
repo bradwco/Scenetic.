@@ -8,6 +8,7 @@ import Home from "../screens/Home";
 import Dashboard from "../screens/Dashboard";
 import Logs from "../screens/Logs";
 import Results from "../screens/Results";
+import Profile from "../screens/Profile";
 
 const Stack = createNativeStackNavigator();
 
@@ -38,6 +39,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Logs"
           component={Logs}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={Profile}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>
