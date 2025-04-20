@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import BottomNavBar from "../components/BottomNavBar";
 import {
   View,
@@ -6,134 +6,197 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
-
-const presets = [
-  "Foggy",
-  "Forest",
-  "Ruins",
-  "Night",
-  "Desert",
-  "Beach",
-  "Snow",
-  "Romantic",
-  "River",
-  "Action",
-  "Neon",
-  "Canyon",
-];
 
 export default function Dashboard({ navigation }) {
   const [sceneDescription, setSceneDescription] = useState("");
   const [selectedPresets, setSelectedPresets] = useState([]);
-  const state = navigation.getState();
-  const currentRoute = state.routes[state.index].name;
+  const [presets, setPresets] = useState([]);
+  const [loadingPresets, setLoadingPresets] = useState(true);
 
-  const addToDescription = (word) => {
-    const space = sceneDescription.length > 0 ? " " : "";
-    setSceneDescription((prev) => prev + space + word);
+  useEffect(() => {
+    fetchTags();
+  }, []);
+
+  const fetchTags = async (retryCount = 0) => {
+    try {
+      setLoadingPresets(true);
+      const response = await fetch("http://10.14.4.251:5001/generate-tags");
+      const data = await response.json();
+      console.log("Received tags from backend:", data);
+
+      // Ensure we have an array of tags
+      const tags = Array.isArray(data.tags) ? data.tags : [];
+
+      if (tags.length > 0) {
+        // Ensure all tags are strings and trim any whitespace
+        const cleanedTags = tags
+          .filter((tag) => typeof tag === "string")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0);
+
+        if (cleanedTags.length > 0) {
+          setPresets(cleanedTags);
+          setLoadingPresets(false);
+          return;
+        }
+      }
+
+      if (retryCount < 3) {
+        console.warn("Empty or invalid tags received. Retrying...");
+        setTimeout(() => fetchTags(retryCount + 1), 500);
+      } else {
+        console.error("Max retries reached. Showing fallback.");
+        setPresets([
+          "Forest",
+          "Rain",
+          "Castle",
+          "Sunset",
+          "Beach",
+          "Mountain",
+          "City",
+          "Desert",
+        ]);
+        setLoadingPresets(false);
+      }
+    } catch (error) {
+      console.error("Failed to fetch tags:", error);
+      if (retryCount < 3) {
+        setTimeout(() => fetchTags(retryCount + 1), 500);
+      } else {
+        setPresets([
+          "Forest",
+          "Rain",
+          "Castle",
+          "Sunset",
+          "Beach",
+          "Mountain",
+          "City",
+          "Desert",
+        ]);
+        setLoadingPresets(false);
+      }
+    }
+  };
+
+  const extractKeywords = async () => {
+    try {
+      const response = await fetch("http://10.14.4.251:5001/extract-keywords", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: sceneDescription }),
+      });
+      const data = await response.json();
+      return data.keywords;
+    } catch (error) {
+      console.error("Failed to extract keywords:", error);
+      return [];
+    }
+  };
+
+  const handlePresetPress = (preset) => {
+    const isAlreadySelected = selectedPresets.includes(preset);
+
+    if (isAlreadySelected) {
+      setSelectedPresets((prev) => prev.filter((p) => p !== preset));
+      setSceneDescription((prev) => {
+        const words = prev.split(" ").filter((word) => word !== preset);
+        return words.join(" ");
+      });
+    } else {
+      setSelectedPresets((prev) => [...prev, preset]);
+      const space = sceneDescription.length > 0 ? " " : "";
+      setSceneDescription((prev) => prev + space + preset);
+    }
   };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.container}>
-        {/* Logo top-right */}
-        <View style={styles.logoWrapper}>
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Dashboard</Text>
           <Text style={styles.logo}>
             <Text style={styles.logoWhite}>SCEN</Text>
             <Text style={styles.logoOrange}>ETIC.</Text>
           </Text>
         </View>
 
-        {/* Main content */}
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.mainContent}
         >
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>Dashboard</Text>
-          </View>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.innerContent}>
+              <Text style={styles.subheading}>Match to your movie scene!</Text>
 
-          <Text style={styles.subheading}>Match to your movie scene!</Text>
+              <TextInput
+                style={styles.textArea}
+                placeholder="Describe your scene..."
+                placeholderTextColor="#999"
+                value={sceneDescription}
+                onChangeText={setSceneDescription}
+                multiline
+                numberOfLines={5}
+              />
 
-          <TextInput
-            style={styles.textArea}
-            placeholder="Describe your scene..."
-            placeholderTextColor="#999"
-            value={sceneDescription}
-            onChangeText={setSceneDescription}
-            multiline
-            numberOfLines={5}
-          />
+              <Text style={styles.smallText}>or choose preset keywords...</Text>
 
-          <Text style={styles.smallText}>or choose preset keywords...</Text>
+              <Text style={styles.presetsLabel}>Presets</Text>
 
-          <Text style={styles.presetsLabel}>Presets</Text>
+              {loadingPresets ? (
+                <ActivityIndicator size="large" color="#F28322" />
+              ) : (
+                <View style={styles.grid}>
+                  {presets.map((preset, index) => {
+                    const isSelected = selectedPresets.includes(preset);
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.presetButton,
+                          isSelected ? styles.orangeButton : styles.whiteButton,
+                        ]}
+                        onPress={() => handlePresetPress(preset)}
+                      >
+                        <Text
+                          style={[
+                            styles.presetText,
+                            isSelected ? styles.whiteText : styles.orangeText,
+                          ]}
+                        >
+                          {preset}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
 
-          <View style={styles.grid}>
-            {presets.map((preset, index) => {
-              const isSelected = selectedPresets.includes(preset);
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.presetButton,
-                    isSelected ? styles.orangeButton : styles.whiteButton,
-                  ]}
-                  onPress={() => {
-                    const isAlreadySelected = selectedPresets.includes(preset);
+              <TouchableOpacity onPress={fetchTags}>
+                <Text style={styles.viewMore}>View more</Text>
+              </TouchableOpacity>
 
-                    if (isAlreadySelected) {
-                      setSelectedPresets((prev) =>
-                        prev.filter((p) => p !== preset)
-                      );
-                      setSceneDescription((prev) => {
-                        const words = prev
-                          .split(" ")
-                          .filter((word) => word !== preset);
-                        return words.join(" ");
-                      });
-                    } else {
-                      setSelectedPresets((prev) => [...prev, preset]);
-                      const space = sceneDescription.length > 0 ? " " : "";
-                      setSceneDescription((prev) => prev + space + preset);
-                    }
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.presetText,
-                      isSelected ? styles.whiteText : styles.orangeText,
-                    ]}
-                  >
-                    {preset}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <TouchableOpacity onPress={() => console.log("View more clicked")}>
-            <Text style={styles.viewMore}>View more</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={() => {
-              alert("Started scan...");
-              navigation.navigate("Results");
-            }}
-          >
-            <Text style={styles.scanButtonText}>Begin Scan</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.scanButton}
+                onPress={async () => {
+                  const keywords = await extractKeywords();
+                  alert("Scanning with keywords: " + keywords.join(", "));
+                  navigation.navigate("Results");
+                }}
+              >
+                <Text style={styles.scanButtonText}>Begin Scan</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </KeyboardAvoidingView>
 
-        {/* Bottom nav bar */}
         <BottomNavBar navigation={navigation} resetOnNavigate={true} />
       </View>
     </TouchableWithoutFeedback>
@@ -144,17 +207,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#121212",
-    justifyContent: "space-between",
   },
-  logoWrapper: {
-    position: "absolute",
-    top: 60,
-    right: 20,
-    zIndex: 1,
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 90,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#F28322",
   },
   logo: {
     fontSize: 16,
     fontWeight: "600",
+    position: "absolute",
+    top: 60,
+    right: 30,
   },
   logoWhite: {
     color: "white",
@@ -165,19 +237,10 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 120,
-    paddingBottom: 150,
-    justifyContent: "flex-start",
+    paddingBottom: 130,
   },
-  headerRow: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#F28322",
-    marginTop: -12,
-    marginBottom: 25,
+  innerContent: {
+    marginTop: 40,
   },
   subheading: {
     color: "#fff",
@@ -216,7 +279,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginBottom: 10,
-    width: "30%",
+    width: "45%",
     alignItems: "center",
     height: 42,
   },
@@ -248,30 +311,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 20,
   },
   scanButtonText: {
     color: "#fff",
     fontWeight: "600",
     fontSize: 16,
-  },
-  navBar: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#1f1f1f",
-    paddingVertical: 2,
-    borderRadius: 30,
-    marginHorizontal: 4,
-    marginBottom: 30,
-  },
-  navIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#fff",
-  },
-  navButton: {
-    padding: 12,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
