@@ -10,16 +10,20 @@ export default function BottomNavBar() {
   return (
     <View style={styles.navBar}>
       <TouchableOpacity
-        onPress={() => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Dashboard" }],
-          });
-        }}
         style={[
           styles.navButton,
           currentRoute === "Dashboard" && styles.activeButton,
         ]}
+        onPress={() => {
+          if (currentRoute === "Dashboard") {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Dashboard" }],
+            });
+          } else {
+            navigation.navigate("Dashboard");
+          }
+        }}
       >
         <Image
           source={require("../assets/home.png")}
@@ -27,20 +31,25 @@ export default function BottomNavBar() {
             styles.navIcon,
             currentRoute === "Dashboard" && styles.activeIcon,
           ]}
+          resizeMode="contain"
         />
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Results" }],
-          });
-        }}
         style={[
           styles.navButton,
           currentRoute === "Results" && styles.activeButton,
         ]}
+        onPress={() => {
+          if (currentRoute === "Results") {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Results" }],
+            });
+          } else {
+            navigation.navigate("Results");
+          }
+        }}
       >
         <Image
           source={require("../assets/camera.png")}
@@ -48,38 +57,51 @@ export default function BottomNavBar() {
             styles.navIcon,
             currentRoute === "Results" && styles.activeIcon,
           ]}
+          resizeMode="contain"
         />
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Logs" }],
-          });
-        }}
         style={[
           styles.navButton,
           currentRoute === "Logs" && styles.activeButton,
         ]}
+        onPress={() => {
+          if (currentRoute === "Logs") {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Logs" }],
+            });
+          } else {
+            navigation.navigate("Logs");
+          }
+        }}
       >
         <Image
           source={require("../assets/logs.png")}
-          style={[styles.navIcon, currentRoute === "Logs" && styles.activeIcon]}
+          style={[
+            styles.navIcon,
+            currentRoute === "Logs" && styles.activeIcon,
+          ]}
+          resizeMode="contain"
         />
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Profile" }],
-          });
-        }}
         style={[
           styles.navButton,
           currentRoute === "Profile" && styles.activeButton,
         ]}
+        onPress={() => {
+          if (currentRoute === "Profile") {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Profile" }],
+            });
+          } else {
+            navigation.navigate("Profile");
+          }
+        }}
       >
         <Image
           source={require("../assets/user.png")}
@@ -87,6 +109,7 @@ export default function BottomNavBar() {
             styles.navIcon,
             currentRoute === "Profile" && styles.activeIcon,
           ]}
+          resizeMode="contain"
         />
       </TouchableOpacity>
     </View>

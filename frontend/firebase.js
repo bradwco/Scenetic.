@@ -115,8 +115,7 @@ export const logoutUser = async () => {
 };
 
 export const monitorAuthState = (callback) => {
-  onAuthStateChanged(auth, (user) => {
+  return onAuthStateChanged(auth, (user) => {
     callback(user);
   });
 };
-
