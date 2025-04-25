@@ -13,6 +13,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import config from '../config';
 
 export default function Dashboard({ navigation }) {
   const [sceneDescription, setSceneDescription] = useState("");
@@ -27,7 +28,7 @@ export default function Dashboard({ navigation }) {
   const fetchTags = async (retryCount = 0) => {
     try {
       setLoadingPresets(true);
-      const response = await fetch("http://10.14.4.251:5001/generate-tags");
+      const response = await fetch(`${config.BASE_URL}/generate-tags`);
       const data = await response.json();
       console.log("Received tags from backend:", data);
 
@@ -114,7 +115,7 @@ export default function Dashboard({ navigation }) {
     alert("Scanning with tags: " + uniqueTags.join(", "));
   
     // 🔥 POST the tags to your backend (Pi) before navigating
-    fetch('http://192.168.137.1:5000/set-tags', {
+    fetch(`${config.BASE_URL}/set-tags`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tags: uniqueTags }),
