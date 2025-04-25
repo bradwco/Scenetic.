@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import BottomNavBar from "../components/BottomNavBar";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from "react-native";
 import { WebView } from "react-native-webview";
+import config from '../config';
 
 export default function Results({ navigation }) {
-  const MJPEG_URL = "http://192.168.137.1:5000/video_feed";
+  const MJPEG_URL = `${config.BASE_URL}/video_feed`;
 
   const [buttonDisabled, setButtonDisabled] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -19,14 +20,14 @@ export default function Results({ navigation }) {
     setSnapshotUrl(null);
 
     // Trigger Arduino Sequence
-    fetch('http://192.168.137.1:5000/start-sequence', { method: 'POST' })
+    fetch(`${config.BASE_URL}/start-sequence`, { method: 'POST' })
       .then(response => console.log('Arduino sequence triggered!'))
       .catch(error => console.error('Error triggering Arduino:', error));
 
     // Wait ~21 seconds to allow Arduino and snapshot saving
     setTimeout(() => {
       const timestamp = Date.now();
-      const snapshotPath = `http://192.168.137.1:5000/latest-snapshot.jpg?t=${timestamp}`;
+      const snapshotPath = `${config.BASE_URL}/latest-snapshot.jpg?t=${timestamp}`;
       setSnapshotUrl(snapshotPath);
 
       // Random confidence between 85-100

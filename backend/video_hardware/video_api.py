@@ -4,17 +4,25 @@ import time
 import cv2
 import serial
 import os
+import sys
 from ultralytics import YOLO
+
+# Allow importing config.py from backend root
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config import CAMERA_STREAM_URL, SNAPSHOT_DIR, ARDUINO_SETTINGS
 
 app = Flask(__name__)
 
-# 🔥 Update if your Pi IP changes
-CAMERA_STREAM_URL = "tcp://192.168.137.83:8888"
+# Setup camera stream
 cap = cv2.VideoCapture(CAMERA_STREAM_URL)
 
 # Setup Serial for Arduino
 try:
-    arduino = serial.Serial(port='COM10', baudrate=9600, timeout=1)
+    arduino = serial.Serial(
+        port=ARDUINO_SETTINGS["port"],
+        baudrate=ARDUINO_SETTINGS["baudrate"],
+        timeout=ARDUINO_SETTINGS["timeout"]
+    )
     time.sleep(2)
 except:
     arduino = None
@@ -23,8 +31,7 @@ except:
 # Load YOLOv8 nano model
 model = YOLO('yolov8n.pt')
 
-# Directory for saving snapshots
-SNAPSHOT_DIR = "/home/bradley/snapshots"
+# Create snapshot directory if it doesn't exist
 os.makedirs(SNAPSHOT_DIR, exist_ok=True)
 
 # Track current detections
@@ -66,11 +73,11 @@ def generate_frames():
 
         current_detections = temp_detections
 
-        # Save the latest frame as latest-snapshot.jpg every time
+        # Save the latest frame
         latest_snapshot_path = os.path.join(SNAPSHOT_DIR, 'latest-snapshot.jpg')
         cv2.imwrite(latest_snapshot_path, frame)
 
-        # Encode frame as JPEG and yield it for video streaming
+        # Encode frame as JPEG for streaming
         success, buffer = cv2.imencode('.jpg', frame)
         if not success:
             continue
@@ -114,6 +121,7 @@ def print_detections():
         else:
             print("[Detected Objects] None")
 
+# Start printing detections in background
 threading.Thread(target=print_detections, daemon=True).start()
 
 if __name__ == "__main__":
